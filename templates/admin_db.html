@@ -1,0 +1,395 @@
+{% extends "layout.html" %}
+{% block title %}MFA - Database Viewer{% endblock %}
+
+{% block styles %}
+<style>
+    .db-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem 0 2rem 0;
+    }
+
+    .db-header {
+        background: rgba(20, 20, 30, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 18px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+        color: #f5f5f7;
+    }
+
+    .db-header h3 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .section-card {
+        background: rgba(18, 18, 28, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 18px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        color: #ffffff;
+        font-weight: 700;
+        margin: 0 0 0.75rem 0;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(0, 0, 0, 0.35);
+        color: #f5f5f7;
+        min-width: 900px;
+    }
+
+    th, td {
+        padding: 0.65rem 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    th {
+        position: sticky;
+        top: 0;
+        background: rgba(90, 42, 134, 0.88);
+        color: #ffffff;
+        font-weight: 700;
+        z-index: 1;
+    }
+
+    tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .meta {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .empty-note {
+        color: rgba(255, 255, 255, 0.8);
+        padding: 0.75rem;
+    }
+
+    .action-btn {
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(122, 59, 184, 0.35);
+        color: #fff;
+        border-radius: 10px;
+        padding: 0.35rem 0.6rem;
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .action-btn:hover {
+        background: rgba(122, 59, 184, 0.55);
+    }
+
+    .action-btn.save-btn {
+        background: rgba(42, 164, 95, 0.28);
+    }
+
+    .action-btn.delete-btn {
+        background: rgba(185, 54, 75, 0.35);
+    }
+
+    .action-btn.secondary-btn {
+        background: rgba(64, 79, 157, 0.35);
+    }
+
+    .actions-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: 130px;
+    }
+
+    .cell-input {
+        width: 100%;
+        min-width: 130px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        padding: 0.35rem 0.45rem;
+        font-size: 0.84rem;
+    }
+
+    .cell-input:focus {
+        outline: none;
+        border-color: rgba(167, 109, 230, 0.95);
+        box-shadow: 0 0 0 2px rgba(167, 109, 230, 0.25);
+    }
+
+    .status-pill {
+        display: none;
+        margin-top: 0.75rem;
+        padding: 0.55rem 0.8rem;
+        border-radius: 10px;
+        font-size: 0.86rem;
+        font-weight: 600;
+    }
+
+    .status-pill.success {
+        display: block;
+        background: rgba(42, 164, 95, 0.22);
+        border: 1px solid rgba(42, 164, 95, 0.55);
+        color: #d4ffe5;
+    }
+
+    .status-pill.error {
+        display: block;
+        background: rgba(185, 54, 75, 0.22);
+        border: 1px solid rgba(185, 54, 75, 0.55);
+        color: #ffd8de;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="db-container">
+    <div class="db-header">
+        <h3><i class="fas fa-database me-2"></i>Database Viewer</h3>
+        <div class="meta">Inline edit is enabled. Change values and click Save on any row.</div>
+        <div id="dbStatus" class="status-pill"></div>
+    </div>
+
+    <div class="section-card">
+        <h4 class="section-title">Users ({{ users|length }})</h4>
+        {% if users %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>User Name</th>
+                        <th>E-mail</th>
+                        <th>Face ID</th>
+                        <th>Created At (UTC)</th>
+                        <th>Updated At (UTC)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr data-user-original-id="{{ user.user_id }}">
+                        <td><input class="cell-input" data-field="user_id" value="{{ user.user_id }}"></td>
+                        <td><input class="cell-input" data-field="user_name" value="{{ user.user_name }}"></td>
+                        <td><input class="cell-input" data-field="email" value="{{ user.email or '' }}"></td>
+                        <td><input class="cell-input" data-field="face_id" value="{{ user.face_id }}"></td>
+                        <td><input class="cell-input" data-field="created_at" value="{{ user.created_at }}"></td>
+                        <td><input class="cell-input" data-field="updated_at" value="{{ user.updated_at }}"></td>
+                        <td>
+                            <div class="actions-stack">
+                                <button type="button" class="action-btn save-btn" onclick="saveUserRow(this)">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                                <button type="button" class="action-btn delete-btn" onclick="deleteUserRow(this)">
+                                    <i class="fas fa-trash-alt me-1"></i>Delete
+                                </button>
+                                <form method="POST"
+                                      action="{{ url_for('admin_resend_qr', user_id=user.user_id) }}"
+                                      data-email="{{ user.email or '' }}"
+                                      data-user-id="{{ user.user_id }}"
+                                      onsubmit="return confirmResendQr(this);">
+                                    <button type="submit" class="action-btn secondary-btn">
+                                        <i class="fas fa-paper-plane me-1"></i>Send QR Again
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-note">No users found.</div>
+        {% endif %}
+    </div>
+
+    <div class="section-card">
+        <h4 class="section-title">Authentication Logs ({{ logs|length }})</h4>
+        {% if logs %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>User Name</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Authenticated At</th>
+                        <th>Logged In At</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Distance (m)</th>
+                        <th>Location Text</th>
+                        <th>IP</th>
+                        <th>User Agent</th>
+                        <th>Notes</th>
+                        <th>Created At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr data-log-id="{{ log.id }}">
+                        <td>{{ log.id }}</td>
+                        <td><input class="cell-input" data-field="user_id" value="{{ log.user_id or '' }}"></td>
+                        <td><input class="cell-input" data-field="user_name" value="{{ log.user_name or '' }}"></td>
+                        <td><input class="cell-input" data-field="login_method" value="{{ log.login_method }}"></td>
+                        <td><input class="cell-input" data-field="status" value="{{ log.status }}"></td>
+                        <td><input class="cell-input" data-field="authenticated_at" value="{{ log.authenticated_at or '' }}"></td>
+                        <td><input class="cell-input" data-field="logged_in_at" value="{{ log.logged_in_at or '' }}"></td>
+                        <td><input class="cell-input" data-field="auth_latitude" value="{{ log.auth_latitude if log.auth_latitude is not none else '' }}"></td>
+                        <td><input class="cell-input" data-field="auth_longitude" value="{{ log.auth_longitude if log.auth_longitude is not none else '' }}"></td>
+                        <td><input class="cell-input" data-field="auth_distance_meters" value="{{ log.auth_distance_meters if log.auth_distance_meters is not none else '' }}"></td>
+                        <td><input class="cell-input" data-field="auth_location_text" value="{{ log.auth_location_text or '' }}"></td>
+                        <td><input class="cell-input" data-field="ip_address" value="{{ log.ip_address or '' }}"></td>
+                        <td><input class="cell-input" data-field="user_agent" value="{{ log.user_agent or '' }}"></td>
+                        <td><input class="cell-input" data-field="notes" value="{{ log.notes or '' }}"></td>
+                        <td><input class="cell-input" data-field="created_at" value="{{ log.created_at }}"></td>
+                        <td>
+                            <div class="actions-stack">
+                                <button type="button" class="action-btn save-btn" onclick="saveLogRow(this)">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                                <button type="button" class="action-btn delete-btn" onclick="deleteLogRow(this)">
+                                    <i class="fas fa-trash-alt me-1"></i>Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-note">No authentication logs found yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function setStatus(message, isSuccess) {
+        const box = document.getElementById('dbStatus');
+        if (!box) return;
+        box.classList.remove('success', 'error');
+        box.textContent = message;
+        box.classList.add(isSuccess ? 'success' : 'error');
+    }
+
+    function getRowPayload(rowElement) {
+        const payload = {};
+        rowElement.querySelectorAll('input[data-field]').forEach((input) => {
+            payload[input.dataset.field] = input.value;
+        });
+        return payload;
+    }
+
+    async function saveUserRow(button) {
+        const row = button.closest('tr');
+        const originalUserId = row.dataset.userOriginalId;
+        const payload = getRowPayload(row);
+
+        const response = await fetch(`/admin/db/users/${encodeURIComponent(originalUserId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            setStatus(result.message || 'Failed to update user row.', false);
+            return;
+        }
+
+        setStatus(result.message || 'User updated.', true);
+        window.location.reload();
+    }
+
+    async function deleteUserRow(button) {
+        const row = button.closest('tr');
+        const originalUserId = row.dataset.userOriginalId;
+        if (!confirm(`Delete user ${originalUserId}? This cannot be undone.`)) {
+            return;
+        }
+
+        const response = await fetch(`/admin/db/users/${encodeURIComponent(originalUserId)}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            setStatus(result.message || 'Failed to delete user.', false);
+            return;
+        }
+
+        row.remove();
+        setStatus(result.message || 'User deleted.', true);
+    }
+
+    async function saveLogRow(button) {
+        const row = button.closest('tr');
+        const logId = row.dataset.logId;
+        const payload = getRowPayload(row);
+
+        const response = await fetch(`/admin/db/auth-logs/${encodeURIComponent(logId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            setStatus(result.message || 'Failed to update log row.', false);
+            return;
+        }
+
+        setStatus(result.message || 'Log row updated.', true);
+    }
+
+    async function deleteLogRow(button) {
+        const row = button.closest('tr');
+        const logId = row.dataset.logId;
+        if (!confirm(`Delete log ID ${logId}? This cannot be undone.`)) {
+            return;
+        }
+
+        const response = await fetch(`/admin/db/auth-logs/${encodeURIComponent(logId)}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            setStatus(result.message || 'Failed to delete log row.', false);
+            return;
+        }
+
+        row.remove();
+        setStatus(result.message || 'Log row deleted.', true);
+    }
+
+    function confirmResendQr(formElement) {
+        const email = formElement.dataset.email || 'no email';
+        const userId = formElement.dataset.userId || 'this user';
+        return confirm(`Send QR code again to ${email} for user ID ${userId}?`);
+    }
+</script>
+{% endblock %}
